@@ -48,6 +48,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
 
         h1 {
@@ -346,6 +347,36 @@
             display: none;
         }
 
+        .last-update {
+            position: absolute;
+            right: 15px;
+            bottom: 5px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .badge {
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge.danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
         /* Адаптивность для мобильных устройств */
         @media (max-width: 768px) {
             .container {
@@ -411,6 +442,13 @@
             .stat-card {
                 min-width: calc(50% - 10px);
             }
+            
+            .last-update {
+                position: static;
+                text-align: right;
+                margin-top: 5px;
+                font-size: 9px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -436,6 +474,7 @@
             <header>
                 <h1><i class="fas fa-beer"></i> Оборудование пивопроизводства</h1>
                 <div class="user" style="font-size: 12px;">Администратор</div>
+                <div class="last-update" id="lastUpdate">Последнее обновление: <span id="updateTime">-</span></div>
             </header>
             
             <div class="main-content">
@@ -476,6 +515,10 @@
                                 <div class="stat-value" id="equip-count">0</div>
                                 <div class="stat-label">Оборудования</div>
                             </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="active-equip">0</div>
+                                <div class="stat-label">Активное оборудование</div>
+                            </div>
                         </div>
                         
                         <div class="card">
@@ -510,6 +553,8 @@
                                                 <th>Модель</th>
                                                 <th>Категория</th>
                                                 <th>Цех</th>
+                                                <th>Статус</th>
+                                                <th>Добавлено</th>
                                             </tr>
                                         </thead>
                                         <tbody id="recent-equipment-body"></tbody>
@@ -552,6 +597,7 @@
                                         <th>ID</th>
                                         <th>Название</th>
                                         <th>Код</th>
+                                        <th>Кол-во оборудования</th>
                                         <th>Действия</th>
                                     </tr>
                                 </thead>
@@ -593,6 +639,7 @@
                                         <th>ID</th>
                                         <th>Название</th>
                                         <th>Описание</th>
+                                        <th>Кол-во оборудования</th>
                                         <th>Действия</th>
                                     </tr>
                                 </thead>
@@ -663,6 +710,7 @@
                                         <th>Категория</th>
                                         <th>Цех/отдел</th>
                                         <th>Статус</th>
+                                        <th>Добавлено</th>
                                         <th>Действия</th>
                                     </tr>
                                 </thead>
@@ -680,7 +728,8 @@
         let db = {
             departments: JSON.parse(localStorage.getItem('departments')) || [],
             categories: JSON.parse(localStorage.getItem('categories')) || [],
-            equipment: JSON.parse(localStorage.getItem('equipment')) || []
+            equipment: JSON.parse(localStorage.getItem('equipment')) || [],
+            lastUpdate: localStorage.getItem('lastUpdate') || new Date().toISOString()
         };
 
         // Функции для работы с сообщениями
@@ -693,6 +742,24 @@
             setTimeout(() => {
                 messageDiv.style.display = 'none';
             }, 3000);
+        }
+
+        // Обновление времени последнего изменения
+        function updateLastModifiedTime() {
+            const now = new Date();
+            db.lastUpdate = now.toISOString();
+            localStorage.setItem('lastUpdate', db.lastUpdate);
+            
+            const formattedTime = now.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            document.getElementById('updateTime').textContent = formattedTime;
         }
 
         // Навигация
@@ -744,6 +811,7 @@
             document.getElementById('departmentName').value = '';
             document.getElementById('departmentCode').value = '';
             showMessage('Цех/отдел успешно добавлен');
+            updateLastModifiedTime();
             updateSelects();
             displayData();
             updateStats();
@@ -761,6 +829,7 @@
             db.departments = db.departments.filter(dept => dept.id !== id);
             localStorage.setItem('departments', JSON.stringify(db.departments));
             showMessage('Цех/отдел удален');
+            updateLastModifiedTime();
             updateSelects();
             displayData();
             updateStats();
@@ -788,6 +857,7 @@
             document.getElementById('categoryName').value = '';
             document.getElementById('categoryDescription').value = '';
             showMessage('Категория успешно добавлена');
+            updateLastModifiedTime();
             updateSelects();
             displayData();
             updateStats();
@@ -805,6 +875,7 @@
             db.categories = db.categories.filter(cat => cat.id !== id);
             localStorage.setItem('categories', JSON.stringify(db.categories));
             showMessage('Категория удалена');
+            updateLastModifiedTime();
             updateSelects();
             displayData();
             updateStats();
@@ -844,6 +915,7 @@
             document.getElementById('equipSerial').value = '';
             
             showMessage('Оборудование успешно добавлено');
+            updateLastModifiedTime();
             displayData();
             updateStats();
         }
@@ -852,6 +924,7 @@
             db.equipment = db.equipment.filter(item => item.id !== id);
             localStorage.setItem('equipment', JSON.stringify(db.equipment));
             showMessage('Оборудование удалено');
+            updateLastModifiedTime();
             displayData();
             updateStats();
         }
@@ -880,11 +953,14 @@
             const departmentsBody = document.getElementById('departmentsTableBody');
             departmentsBody.innerHTML = '';
             db.departments.forEach(dept => {
+                const equipmentCount = db.equipment.filter(item => item.departmentId === dept.id).length;
+                
                 departmentsBody.innerHTML += `
                     <tr>
                         <td>${dept.id}</td>
                         <td>${dept.name}</td>
                         <td>${dept.code}</td>
+                        <td>${equipmentCount}</td>
                         <td class="actions">
                             <button class="action-btn btn-danger" onclick="deleteDepartment(${dept.id})"><i class="fas fa-trash"></i></button>
                         </td>
@@ -896,11 +972,14 @@
             const categoriesBody = document.getElementById('categoriesTableBody');
             categoriesBody.innerHTML = '';
             db.categories.forEach(cat => {
+                const equipmentCount = db.equipment.filter(item => item.categoryId === cat.id).length;
+                
                 categoriesBody.innerHTML += `
                     <tr>
                         <td>${cat.id}</td>
                         <td>${cat.name}</td>
                         <td>${cat.description || '-'}</td>
+                        <td>${equipmentCount}</td>
                         <td class="actions">
                             <button class="action-btn btn-danger" onclick="deleteCategory(${cat.id})"><i class="fas fa-trash"></i></button>
                         </td>
@@ -920,6 +999,9 @@
                 if (item.status === 'maintenance') statusClass = 'warning';
                 if (item.status === 'inactive') statusClass = 'danger';
                 
+                const addedDate = new Date(item.dateAdded);
+                const formattedDate = addedDate.toLocaleDateString('ru-RU');
+                
                 equipmentBody.innerHTML += `
                     <tr>
                         <td>${item.id}</td>
@@ -928,6 +1010,7 @@
                         <td>${category ? category.name : 'Неизвестно'}</td>
                         <td>${department ? department.name : 'Неизвестно'}</td>
                         <td><span class="badge ${statusClass}">${getStatusText(item.status)}</span></td>
+                        <td>${formattedDate}</td>
                         <td class="actions">
                             <button class="action-btn btn-danger" onclick="deleteEquipment(${item.id})"><i class="fas fa-trash"></i></button>
                         </td>
@@ -940,11 +1023,19 @@
             recentEquipmentBody.innerHTML = '';
             
             // Берем 5 последних записей
-            const recentEquipment = [...db.equipment].sort((a, b) => b.id - a.id).slice(0, 5);
+            const recentEquipment = [...db.equipment].sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded)).slice(0, 5);
             
             recentEquipment.forEach(item => {
                 const category = db.categories.find(cat => cat.id === item.categoryId);
                 const department = db.departments.find(dept => dept.id === item.departmentId);
+                
+                let statusClass = '';
+                if (item.status === 'active') statusClass = 'success';
+                if (item.status === 'maintenance') statusClass = 'warning';
+                if (item.status === 'inactive') statusClass = 'danger';
+                
+                const addedDate = new Date(item.dateAdded);
+                const formattedDate = addedDate.toLocaleDateString('ru-RU');
                 
                 recentEquipmentBody.innerHTML += `
                     <tr>
@@ -952,6 +1043,8 @@
                         <td>${item.model || '-'}</td>
                         <td>${category ? category.name : 'Неизвестно'}</td>
                         <td>${department ? department.name : 'Неизвестно'}</td>
+                        <td><span class="badge ${statusClass}">${getStatusText(item.status)}</span></td>
+                        <td>${formattedDate}</td>
                     </tr>
                 `;
             });
@@ -970,6 +1063,48 @@
             document.getElementById('dept-count').textContent = db.departments.length;
             document.getElementById('cat-count').textContent = db.categories.length;
             document.getElementById('equip-count').textContent = db.equipment.length;
+            
+            // Подсчет активного оборудования
+            const activeEquipment = db.equipment.filter(item => item.status === 'active').length;
+            document.getElementById('active-equip').textContent = activeEquipment;
+        }
+
+        // Функция для проверки изменений в других вкладках
+        function checkForUpdates() {
+            const storedDepartments = JSON.parse(localStorage.getItem('departments')) || [];
+            const storedCategories = JSON.parse(localStorage.getItem('categories')) || [];
+            const storedEquipment = JSON.parse(localStorage.getItem('equipment')) || [];
+            const storedLastUpdate = localStorage.getItem('lastUpdate');
+            
+            // Проверяем, изменились ли данные
+            if (storedLastUpdate !== db.lastUpdate) {
+                // Обновляем данные
+                db.departments = storedDepartments;
+                db.categories = storedCategories;
+                db.equipment = storedEquipment;
+                db.lastUpdate = storedLastUpdate;
+                
+                // Обновляем интерфейс
+                updateSelects();
+                displayData();
+                updateStats();
+                
+                // Обновляем время последнего изменения
+                if (storedLastUpdate) {
+                    const updateTime = new Date(storedLastUpdate);
+                    const formattedTime = updateTime.toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    document.getElementById('updateTime').textContent = formattedTime;
+                }
+                
+                showMessage('Данные обновлены', 'success');
+            }
         }
 
         // Инициализация при загрузке страницы
@@ -1032,6 +1167,9 @@
                 localStorage.setItem('equipment', JSON.stringify(db.equipment));
             }
 
+            // Обновляем время последнего изменения
+            updateLastModifiedTime();
+            
             updateSelects();
             displayData();
             updateStats();
@@ -1044,6 +1182,18 @@
             document.getElementById('searchDepartment').addEventListener('input', filterDepartments);
             document.getElementById('searchCategory').addEventListener('input', filterCategories);
             document.getElementById('searchEquipment').addEventListener('input', filterEquipment);
+            
+            // Запускаем проверку обновлений каждые 2 секунды
+            setInterval(checkForUpdates, 2000);
+            
+            // Также проверяем при возвращении на вкладку
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    checkForUpdates();
+                }
+            });
+            
+            window.addEventListener('focus', checkForUpdates);
         };
         
         // Функции для фильтрации
